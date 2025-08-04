@@ -1,14 +1,14 @@
 import mongoose from 'mongoose';
 
 const productSchema = new mongoose.Schema({
-  userId: { type: String, required: true },
-  title: { type: String, required: true },
-  price: { type: Number, required: true },
-  imageUrl: { type: String },
-  category: { type: String },
-  productUrl: { type: String, required: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
+  productName: { type: String, required: true },
+  productPrice: { type: Number, required: true },
+  productImage: { type: String }, // optional
+  productType: { type: String, default: 'General' },
+  productLink: { type: String, required: true },
   targetDate: { type: Date, required: true },
-  contributionType: { type: String, enum: ['monthly', 'daily'], required: true },
+  contributionType: { type: String, required: true },
   contributionAmount: { type: Number, required: true },
   savedAmount: { type: Number, default: 0 }
 }, { timestamps: true });
