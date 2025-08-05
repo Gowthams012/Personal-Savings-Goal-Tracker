@@ -1,11 +1,9 @@
-// AI/productFetch.js
-
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 class ProductCategoryDetector {
   constructor() {
@@ -23,19 +21,19 @@ class ProductCategoryDetector {
         ]
       },
       'Electronics & Mobile': {
-        keywords: ['smartphone', 'iphone', 'android', 'samsung', 'oneplus', 'realme', 'charger']
+        keywords: ['smartphone', 'iphone', 'android', 'samsung', 'oneplus', 'realme', 'charger', 'mobile', 'phone']
       },
       'Electronics & Computing': {
-        keywords: ['laptop', 'desktop', 'monitor', 'keyboard', 'mouse', 'ram', 'ssd', 'macbook']
+        keywords: ['laptop', 'desktop', 'monitor', 'keyboard', 'mouse', 'ram', 'ssd', 'macbook', 'computer']
       },
       'Home & Kitchen': {
-        keywords: ['microwave', 'refrigerator', 'blender', 'toaster', 'kettle', 'cooker']
+        keywords: ['microwave', 'refrigerator', 'blender', 'toaster', 'kettle', 'cooker', 'appliance']
       },
       'Fashion & Clothing': {
-        keywords: ['shirt', 'pants', 'jeans', 'dress', 'shoes', 'handbag', 'wallet']
+        keywords: ['shirt', 'pants', 'jeans', 'dress', 'shoes', 'handbag', 'wallet', 'clothing', 'fashion']
       },
       'Health & Beauty': {
-        keywords: ['skincare', 'makeup', 'lotion', 'serum', 'shampoo', 'vitamin']
+        keywords: ['skincare', 'makeup', 'lotion', 'serum', 'shampoo', 'vitamin', 'cosmetic']
       }
     };
 
@@ -77,656 +75,522 @@ class ProductCategoryDetector {
 
 const categoryDetector = new ProductCategoryDetector();
 
+// Enhanced price cleaning function
 const cleanPrice = (text) => {
   if (!text) return 0;
-  const value = text.replace(/[^\d.]/g, '');
-  return parseFloat(value) || 0;
+ 
+  console.log(`Cleaning price text: "${text}"`);
+ 
+  // Convert to string and handle various currency formats
+  let cleanText = text.toString()
+    .replace(/₹|Rs\.?|INR|\$|USD|€|EUR|£|GBP|¥|JPY|CNY/gi, '') // Remove currency symbols
+    .replace(/[^\d.,]/g, '') // Keep only digits, commas, and dots
+    .trim();
+ 
+  if (!cleanText) return 0;
+ 
+  // Handle different number formats
+  if (cleanText.includes(',') && cleanText.includes('.')) {
+    // Format like 1,23,456.78 - remove commas, keep dot as decimal
+    cleanText = cleanText.replace(/,/g, '');
+  } else if (cleanText.includes(',') && !cleanText.includes('.')) {
+    // Format like 1,23,456 - remove commas
+    cleanText = cleanText.replace(/,/g, '');
+  }
+ 
+  const value = parseFloat(cleanText) || 0;
+  console.log(`Final price value: ${value}`);
+  return value;
 };
 
-const extractJSON = (text) => {
+// Enhanced price extraction with site-specific logic
+const extractPricesFromPage = ($, url) => {
+  const prices = [];
+  const domain = new URL(url).hostname.toLowerCase();
+  
+  // Comprehensive price selectors for different e-commerce sites
+  const priceSelectors = [
+    // Generic selectors
+    '[data-testid*="price"]', '.price', '.product-price', '#price',
+    '[class*="price"]', '[id*="price"]', '.cost', '.amount', '.value',
+    '[class*="cost"]', '[class*="amount"]', '.final-price', '.selling-price',
+    
+    // Amazon specific
+    '.a-price-range', '.a-offscreen', '.a-price .a-offscreen', 
+    '#priceblock_dealprice', '#priceblock_ourprice', '.a-price-current',
+    
+    // Flipkart specific
+    '._30jeq3._16Jk6d', '._30jeq3', '.CEmiEU', '._1_WHN1',
+    
+    // Myntra specific
+    '.pdp-price', '.product-discountedPrice', '.product-price',
+    
+    // Ajio specific
+    '.prod-sp', '.price-text',
+    
+    // Nykaa specific
+    '.product-price', '.price-show',
+    
+    // Common patterns
+    '[data-price]', '[data-original-price]', '[data-sale-price]',
+    '.current-price', '.sale-price', '.offer-price', '.discounted-price',
+    '.product-cost', '.item-price', '.buy-price', '.mrp-price'
+  ];
+  
+  // Extract prices from each selector
+  priceSelectors.forEach(selector => {
+    $(selector).each((i, el) => {
+      const $el = $(el);
+      const text = $el.text().trim();
+      const dataPrice = $el.attr('data-price') || $el.attr('content') || $el.attr('value');
+      
+      // Try text content first
+      if (text) {
+        const price = cleanPrice(text);
+        if (price > 0) {
+          prices.push({
+            price,
+            source: 'text',
+            selector,
+            text,
+            element: $el.prop('tagName'),
+            classes: $el.attr('class') || ''
+          });
+        }
+      }
+      
+      // Try data attributes
+      if (dataPrice) {
+        const price = cleanPrice(dataPrice);
+        if (price > 0) {
+          prices.push({
+            price,
+            source: 'data-attribute',
+            selector,
+            text: dataPrice,
+            element: $el.prop('tagName'),
+            classes: $el.attr('class') || ''
+          });
+        }
+      }
+    });
+  });
+  
+  // Extract from JSON-LD structured data
+  $('script[type="application/ld+json"]').each((i, el) => {
+    try {
+      const jsonData = JSON.parse($(el).html());
+      const extractPriceFromJson = (obj) => {
+        if (obj && typeof obj === 'object') {
+          if (obj.price) {
+            const price = cleanPrice(obj.price);
+            if (price > 0) {
+              prices.push({
+                price,
+                source: 'json-ld',
+                selector: 'script[type="application/ld+json"]',
+                text: obj.price.toString(),
+                element: 'script',
+                classes: 'structured-data'
+              });
+            }
+          }
+          if (obj.offers && obj.offers.price) {
+            const price = cleanPrice(obj.offers.price);
+            if (price > 0) {
+              prices.push({
+                price,
+                source: 'json-ld-offers',
+                selector: 'script[type="application/ld+json"]',
+                text: obj.offers.price.toString(),
+                element: 'script',
+                classes: 'structured-data'
+              });
+            }
+          }
+          // Recursively check nested objects
+          Object.values(obj).forEach(value => {
+            if (typeof value === 'object') {
+              extractPriceFromJson(value);
+            }
+          });
+        }
+      };
+      extractPriceFromJson(jsonData);
+    } catch (e) {
+      // Ignore JSON parsing errors
+    }
+  });
+  
+  // Extract from meta tags
+  $('meta[property*="price"], meta[name*="price"]').each((i, el) => {
+    const content = $(el).attr('content');
+    if (content) {
+      const price = cleanPrice(content);
+      if (price > 0) {
+        prices.push({
+          price,
+          source: 'meta-tag',
+          selector: 'meta',
+          text: content,
+          element: 'meta',
+          classes: 'meta-data'
+        });
+      }
+    }
+  });
+  
+  // Fallback: search for currency patterns in page text
+  const bodyText = $('body').text();
+  const currencyMatches = bodyText.match(/₹\s?[\d,]+(\.\d{2})?/g) || [];
+  currencyMatches.forEach(match => {
+    const price = cleanPrice(match);
+    if (price > 10 && price < 10000000) { // Reasonable price range
+      prices.push({
+        price,
+        source: 'text-pattern',
+        selector: 'body-text-search',
+        text: match,
+        element: 'text',
+        classes: 'pattern-match'
+      });
+    }
+  });
+  
+  return prices;
+};
+
+// Smart price selection logic
+const selectBestPrice = (prices, domain) => {
+  if (prices.length === 0) return 0;
+  
+  console.log(`Found ${prices.length} potential prices:`, prices.map(p => `${p.price} (${p.source})`));
+  
+  // Remove duplicates
+  const uniquePrices = [];
+  const seenPrices = new Set();
+  prices.forEach(priceObj => {
+    if (!seenPrices.has(priceObj.price)) {
+      seenPrices.add(priceObj.price);
+      uniquePrices.push(priceObj);
+    }
+  });
+  
+  // Scoring system to pick the most likely current selling price
+  const scoredPrices = uniquePrices.map(priceObj => {
+    let score = 0;
+    const { price, source, selector, text, classes } = priceObj;
+    
+    // Higher score for structured data
+    if (source === 'json-ld' || source === 'json-ld-offers') score += 10;
+    if (source === 'meta-tag') score += 8;
+    
+    // Higher score for specific price-related classes/selectors
+    if (classes.includes('current') || classes.includes('selling')) score += 5;
+    if (classes.includes('final') || classes.includes('offer')) score += 4;
+    if (classes.includes('discounted') || classes.includes('sale')) score += 3;
+    
+    // Lower score for MRP/original price indicators
+    if (classes.includes('mrp') || classes.includes('original') || classes.includes('crossed')) score -= 5;
+    if (text.toLowerCase().includes('mrp') || text.toLowerCase().includes('was')) score -= 3;
+    
+    // Reasonable price range gets bonus
+    if (price >= 50 && price <= 500000) score += 2;
+    
+    // Site-specific scoring
+    if (domain.includes('amazon')) {
+      if (selector.includes('a-price-current') || selector.includes('a-offscreen')) score += 3;
+    } else if (domain.includes('flipkart')) {
+      if (selector.includes('_30jeq3') || selector.includes('CEmiEU')) score += 3;
+    }
+    
+    return { ...priceObj, score };
+  });
+  
+  // Sort by score (highest first), then by price (lowest first for same score)
+  scoredPrices.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return a.price - b.price;
+  });
+  
+  console.log('Scored prices:', scoredPrices.map(p => `${p.price} (score: ${p.score})`));
+  
+  return scoredPrices[0]?.price || 0;
+};
+
+// Get page content with multiple strategies
+const getPageContent = async (url) => {
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Connection': 'keep-alive',
+    'Upgrade-Insecure-Requests': '1',
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'none',
+    'Cache-Control': 'max-age=0'
+  };
+
   try {
-    return JSON.parse(text);
-  } catch {
-    const match = text.match(/\{[\s\S]*?\}/);
-    return match ? JSON.parse(match[0]) : null;
+    const response = await axios.get(url, {
+      headers,
+      timeout: 15000,
+      maxRedirects: 5,
+      validateStatus: (status) => status < 500
+    });
+   
+    return response.data;
+  } catch (error) {
+    console.log('Primary request failed, trying with minimal headers...');
+   
+    try {
+      const response = await axios.get(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; ProductBot/1.0)'
+        },
+        timeout: 10000
+      });
+      return response.data;
+    } catch (fallbackError) {
+      throw new Error(`Failed to fetch page: ${fallbackError.message}`);
+    }
   }
 };
 
-const scrapeProductDetails = async (url) => {
-  const { data } = await axios.get(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0'
+// Enhanced AI-powered product extraction
+const extractWithAI = async (url, htmlContent = null) => {
+  try {
+    let prompt;
+   
+    if (htmlContent) {
+      const $ = cheerio.load(htmlContent);
+      const title = $('title').text();
+      const metaDescription = $('meta[name="description"]').attr('content') || '';
+      
+      // Extract price information from various sources
+      const allPrices = extractPricesFromPage($, url);
+      const priceContext = allPrices.length > 0 
+        ? `\nFound prices on page: ${allPrices.map(p => `₹${p.price} (from ${p.source})`).join(', ')}`
+        : '';
+      
+      const bodyText = $('body').text().substring(0, 3000);
+     
+      prompt = `
+Extract product information from this e-commerce page content.
+
+Page Title: ${title}
+Meta Description: ${metaDescription}
+URL: ${url}${priceContext}
+
+Page Content (excerpt): ${bodyText}
+
+Please analyze and return ONLY a valid JSON object:
+{
+  "name": "exact product name (not page title)",
+  "price": numeric_value_only,
+  "image": "full_image_url_if_found",
+  "description": "brief product description",
+  "brand": "brand name if identifiable"
+}
+
+CRITICAL PRICE EXTRACTION RULES:
+- Extract the CURRENT SELLING PRICE (the price customer actually pays)
+- IGNORE crossed-out prices, MRP, or "was" prices
+- Look for terms like "Deal Price", "Offer Price", "Sale Price", "Current Price"
+- If multiple prices exist, choose the LOWEST active selling price
+- Price should be numeric only (remove ₹, $, commas, etc.)
+- If you see structured price data above, prioritize those values
+
+Important:
+- Name should be the actual product name, not website name
+- If cannot extract reliable data, return: {"error": "extraction_failed"}
+- Return only JSON, no explanations
+`;
+    } else {
+      prompt = `
+Extract product information from this URL: ${url}
+
+Please analyze the page and return ONLY a valid JSON object:
+{
+  "name": "exact product name",
+  "price": numeric_value_only,
+  "image": "full_image_url_if_found", 
+  "description": "brief product description",
+  "brand": "brand name if identifiable"
+}
+
+Focus on finding the current selling price (not MRP or crossed-out prices).
+If cannot extract, return: {"error": "extraction_failed"}
+Return only JSON, no explanations.
+`;
     }
-  });
 
-  const $ = cheerio.load(data);
-
-  const titleSelectors = ['#productTitle', 'h1', '.product-title'];
-  const priceSelectors = ['.price', '.a-price-whole'];
-  const imageSelectors = ['#landingImage', 'img'];
-
-  const getText = (selectors) => {
-    for (const s of selectors) {
-      const el = $(s).first();
-      if (el.length) return el.text().trim();
+    console.log('Sending request to AI...');
+    const result = await model.generateContent(prompt);
+    const responseText = await result.response.text();
+   
+    console.log('AI Response:', responseText);
+   
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('No JSON found in AI response');
     }
-    return '';
-  };
-
-  const getImage = (selectors) => {
-    for (const s of selectors) {
-      const el = $(s).first();
-      if (el.length) return el.attr('src') || el.attr('data-src') || '';
+   
+    const extractedData = JSON.parse(jsonMatch[0]);
+   
+    if (extractedData.error) {
+      throw new Error(`AI extraction failed: ${extractedData.error}`);
     }
-    return '';
-  };
-
-  const name = getText(titleSelectors);
-  const price = cleanPrice(getText(priceSelectors));
-  const image = getImage(imageSelectors);
-  const category = categoryDetector.detectCategory(name, price);
-
-  return { name, price, image, category };
+   
+    return {
+      name: extractedData.name || 'Product Name Not Found',
+      price: cleanPrice(extractedData.price) || 0,
+      image: extractedData.image || '',
+      description: extractedData.description || '',
+      brand: extractedData.brand || '',
+      category: categoryDetector.detectCategory(extractedData.name || '', cleanPrice(extractedData.price) || 0)
+    };
+   
+  } catch (error) {
+    console.error('AI extraction error:', error.message);
+    throw error;
+  }
 };
 
+// Enhanced HTML parsing with improved price detection
+const basicHtmlExtraction = async (url, htmlContent) => {
+  try {
+    const $ = cheerio.load(htmlContent);
+    const domain = new URL(url).hostname.toLowerCase();
+
+    const titleSelectors = [
+      'h1', '[data-testid*="title"]', '[data-testid*="name"]', '.product-title',
+      '.product-name', '#product-title', '#product-name', '.title',
+      '[class*="title"]', '[class*="name"]', '[id*="title"]', '[id*="name"]'
+    ];
+
+    const imageSelectors = [
+      '.product-image img', '.main-image', '[data-testid*="image"] img',
+      'img[alt*="product"]', 'img[src*="product"]', '.gallery img',
+      '[class*="image"] img', '.hero img'
+    ];
+
+    // Extract title
+    let name = '';
+    for (const selector of titleSelectors) {
+      const element = $(selector).first();
+      if (element.length) {
+        const text = element.text().trim();
+        if (text.length > 5 && !/buy|shop|cart/i.test(text)) {
+          name = text;
+          break;
+        }
+      }
+    }
+
+    // Extract prices using enhanced logic
+    const allPrices = extractPricesFromPage($, url);
+    const price = selectBestPrice(allPrices, domain);
+
+    // Extract image
+    let image = '';
+    for (const selector of imageSelectors) {
+      const element = $(selector).first();
+      if (element.length) {
+        image = element.attr('src') || element.attr('data-src') || element.attr('data-original') || '';
+        if (image.startsWith('//')) image = 'https:' + image;
+        if (image && !image.includes('placeholder')) break;
+      }
+    }
+
+    return {
+      name: name || 'Product Name Not Found',
+      price: price,
+      image: image,
+      category: categoryDetector.detectCategory(name, price),
+      description: '',
+      brand: ''
+    };
+
+  } catch (error) {
+    console.error('Basic extraction error:', error.message);
+    throw error;
+  }
+};
+
+// Main export function
 export const fetchProduct = async (link) => {
   if (!link) throw new Error("Link is required");
 
+  console.log(`\n=== Fetching product from: ${link} ===`);
+
   try {
-    const prompt = `
-      Extract product info from: ${link}
-      Return JSON:
-      {
-        "name": "product name",
-        "price": number,
-        "image": "image URL"
+    // Strategy 1: Fetch HTML + Enhanced extraction
+    console.log('🌐 Fetching page content...');
+    let htmlContent;
+    try {
+      htmlContent = await getPageContent(link);
+      console.log('Page content fetched successfully');
+    } catch (fetchError) {
+      console.log('Failed to fetch page content:', fetchError.message);
+      throw new Error(`Cannot access the webpage: ${fetchError.message}`);
+    }
+
+    // Strategy 2: AI extraction with HTML content (primary method)
+    console.log('🤖 Trying AI extraction with page content...');
+    try {
+      const aiResult = await extractWithAI(link, htmlContent);
+      if (aiResult.name !== 'Product Name Not Found' || aiResult.price > 0) {
+        console.log(' AI + HTML extraction successful!');
+        return aiResult;
       }
-    `;
-    const result = await model.generateContent(prompt);
-    const resText = await result.response.text();
-    const parsed = extractJSON(resText);
+    } catch (aiError) {
+      console.log(' AI + HTML extraction failed:', aiError.message);
+    }
 
-    if (parsed?.name?.includes("cannot access")) throw new Error("AI fallback");
+    // Strategy 3: Enhanced HTML parsing fallback
+    console.log('🔧 Trying enhanced HTML parsing...');
+    const basicResult = await basicHtmlExtraction(link, htmlContent);
+   
+    if (basicResult.name !== 'Product Name Not Found' || basicResult.price > 0) {
+      console.log('Enhanced HTML extraction provided data');
+      return {
+        ...basicResult,
+        note: 'Extracted using enhanced HTML parsing'
+      };
+    }
 
-    parsed.price = cleanPrice(parsed.price);
-    parsed.category = categoryDetector.detectCategory(parsed.name, parsed.price);
-    return parsed;
-  } catch (err) {
-    const fallback = await scrapeProductDetails(link);
-    return fallback;
+    // Strategy 4: AI-only extraction (last resort)
+    console.log('🤖 Trying AI-only extraction as fallback...');
+    try {
+      const aiResult = await extractWithAI(link);
+      if (aiResult.name !== 'Product Name Not Found' || aiResult.price > 0) {
+        console.log('AI-only extraction provided some data');
+        return {
+          ...aiResult,
+          note: 'Extracted using AI-only method - may be less accurate'
+        };
+      }
+    } catch (aiError) {
+      console.log('❌ AI-only extraction failed:', aiError.message);
+    }
+
+    console.log('All extraction methods provided limited results');
+    return {
+      name: 'Product Name Not Available',
+      price: 0,
+      image: '',
+      category: 'General',
+      description: '',
+      brand: '',
+      error: 'Could not extract complete product information',
+      url: link
+    };
+
+  } catch (error) {
+    console.error('❌ Complete extraction failure:', error.message);
+    throw new Error(`Failed to extract product information: ${error.message}`);
   }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import axios from 'axios';
-// import * as cheerio from 'cheerio';
-// import { GoogleGenerativeAI } from '@google/generative-ai';
-// import Product from '../models/productModels.js'; // Import your Product model
-
-// const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-// const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-// // Intelligent Category Detection System
-// class ProductCategoryDetector {
-//   constructor() {
-//     this.categoryMap = {
-//       'Electronics & Audio': {
-//         keywords: [
-//           'headphones', 'headphone', 'earphones', 'earphone', 'earbuds', 'earbud',
-//           'headset', 'speakers', 'speaker', 'soundbar', 'bluetooth', 'wireless',
-//           'audio', 'microphone', 'mic', 'amplifier', 'subwoofer', 'tweeter',
-//           'bass', 'stereo', 'noise cancelling', 'anc', 'tws', 'airpods',
-//           'beats', 'sony', 'bose', 'jbl', 'boat', 'sennheiser'
-//         ],
-//         patterns: [
-//           /\b(in-ear|on-ear|over-ear)\b/i,
-//           /\bwith mic\b/i,
-//           /\bnoise cancel/i,
-//           /\bbass\s*heads?\b/i
-//         ]
-//       },
-//       'Electronics & Mobile': {
-//         keywords: [
-//           'smartphone', 'phone', 'mobile', 'iphone', 'android', 'samsung',
-//           'oneplus', 'xiaomi', 'realme', 'oppo', 'vivo', 'pixel', 'huawei',
-//           'case', 'cover', 'screen protector', 'charger', 'power bank',
-//           'cable', 'adapter', 'wireless charger', 'magsafe', 'fast charging'
-//         ]
-//       },
-//       'Electronics & Computing': {
-//         keywords: [
-//           'laptop', 'computer', 'desktop', 'monitor', 'keyboard', 'mouse',
-//           'webcam', 'processor', 'cpu', 'gpu', 'ram', 'ssd', 'hdd',
-//           'motherboard', 'graphics card', 'gaming', 'mechanical keyboard',
-//           'dell', 'hp', 'lenovo', 'asus', 'acer', 'macbook', 'imac'
-//         ]
-//       },
-//       'Home & Kitchen': {
-//         keywords: [
-//           'kitchen', 'cookware', 'utensils', 'appliances', 'microwave',
-//           'refrigerator', 'washing machine', 'dishwasher', 'blender',
-//           'mixer', 'grinder', 'toaster', 'kettle', 'cooker', 'pan'
-//         ]
-//       },
-//       'Fashion & Clothing': {
-//         keywords: [
-//           'shirt', 'pants', 'jeans', 'dress', 'jacket', 'sweater',
-//           'hoodie', 't-shirt', 'kurta', 'saree', 'shoes', 'sneakers',
-//           'boots', 'sandals', 'bag', 'handbag', 'backpack', 'wallet'
-//         ]
-//       },
-//       'Health & Beauty': {
-//         keywords: [
-//           'skincare', 'makeup', 'cosmetics', 'cream', 'lotion', 'serum',
-//           'shampoo', 'conditioner', 'soap', 'perfume', 'deodorant',
-//           'toothbrush', 'toothpaste', 'vitamin', 'supplement'
-//         ]
-//       }
-//     };
-
-//     this.brandCategories = {
-//       'boat': 'Electronics & Audio',
-//       'jbl': 'Electronics & Audio',
-//       'sony': 'Electronics & Audio',
-//       'bose': 'Electronics & Audio',
-//       'beats': 'Electronics & Audio',
-//       'apple': 'Electronics & Mobile',
-//       'samsung': 'Electronics & Mobile',
-//       'oneplus': 'Electronics & Mobile',
-//       'xiaomi': 'Electronics & Mobile'
-//     };
-//   }
-
-//   detectCategory(productName, price = 0) {
-//     const text = productName.toLowerCase();
-//     const scores = {};
-
-//     Object.keys(this.categoryMap).forEach(category => {
-//       scores[category] = 0;
-//     });
-
-//     Object.entries(this.categoryMap).forEach(([category, config]) => {
-//       config.keywords.forEach(keyword => {
-//         if (text.includes(keyword.toLowerCase())) {
-//           const exactMatch = new RegExp(`\\b${keyword.toLowerCase()}\\b`).test(text);
-//           scores[category] += exactMatch ? 3 : 1;
-//         }
-//       });
-
-//       if (config.patterns) {
-//         config.patterns.forEach(pattern => {
-//           if (pattern.test(text)) {
-//             scores[category] += 5;
-//           }
-//         });
-//       }
-//     });
-
-//     Object.entries(this.brandCategories).forEach(([brand, category]) => {
-//       if (text.includes(brand.toLowerCase())) {
-//         scores[category] += 4;
-//       }
-//     });
-
-//     const maxScore = Math.max(...Object.values(scores));
-    
-//     if (maxScore === 0) {
-//       return 'General';
-//     }
-
-//     const detectedCategory = Object.keys(scores).find(category => scores[category] === maxScore);
-//     return detectedCategory || 'General';
-//   }
-// }
-
-// const categoryDetector = new ProductCategoryDetector();
-
-// const cleanPrice = (text) => {
-//   if (!text) return 0;
-//   const priceMatch = text.replace(/[^\d.]/g, '');
-//   return parseFloat(priceMatch) || 0;
-// };
-
-// const extractJSON = (text) => {
-//   try {
-//     return JSON.parse(text);
-//   } catch {
-//     const jsonMatch = text.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
-//     if (jsonMatch) {
-//       return JSON.parse(jsonMatch[1]);
-//     }
-//     const objectMatch = text.match(/\{[\s\S]*\}/);
-//     if (objectMatch) {
-//       return JSON.parse(objectMatch[0]);
-//     }
-    
-//     throw new Error('No valid JSON found in response');
-//   }
-// };
-
-// const scrapeProductDetails = async (url) => {
-//   try {
-//     const { data } = await axios.get(url, {
-//       headers: {
-//         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-//       },
-//       timeout: 10000
-//     });
-//     const $ = cheerio.load(data);
-//     const selectors = {
-//       title: [
-//         'h1[data-automation-id="product-title"]', // Walmart
-//         '#productTitle', // Amazon
-//         'h1.x-item-title-label', // eBay
-//         '.pdp-product-name',
-//         '.product-title',
-//         'h1',
-//         '.title'
-//       ],
-//       price: [
-//         '[data-automation-id="product-price"]',
-//         '.a-price-whole',
-//         '.price',
-//         '.current-price',
-//         '.sale-price',
-//         '.regular-price'
-//       ],
-//       image: [
-//         '[data-automation-id="hero-image"] img',
-//         '#landingImage',
-//         '.product-image img',
-//         '.hero-image img',
-//         '.main-image img'
-//       ]
-//     };
-
-//     const extractText = (selectors) => {
-//       for (const selector of selectors) {
-//         const element = $(selector).first();
-//         if (element.length) {
-//           return element.text().trim();
-//         }
-//       }
-//       return '';
-//     };
-
-//     const extractImageUrl = (selectors) => {
-//       for (const selector of selectors) {
-//         const element = $(selector).first();
-//         if (element.length) {
-//           return element.attr('src') || element.attr('data-src') || '';
-//         }
-//       }
-//       return '';
-//     };
-
-//     const name = extractText(selectors.title);
-//     const price = cleanPrice(extractText(selectors.price));
-
-//     return {
-//       name,
-//       price,
-//       image: extractImageUrl(selectors.image),
-//       category: categoryDetector.detectCategory(name, price)
-//     };
-//   } catch (error) {
-//     console.error('Scraping error:', error);
-//     throw new Error('Failed to scrape product details');
-//   }
-// };
-
-// // Parse product and return data (without saving to DB)
-// export const parseProduct = async (req, res) => {
-//   try {
-//     const { link } = req.body;
-//     if (!link) {
-//       return res.status(400).json({ error: "Product link is required" });
-//     }
-    
-//     try {
-//       new URL(link);
-//     } catch {
-//       return res.status(400).json({ error: "Invalid URL format" });
-//     }
-    
-//     let productData = null;
-    
-//     try {
-//       const prompt = `
-//         Extract product information from this e-commerce URL: ${link}
-        
-//         Please return ONLY a valid JSON object with the following structure:
-//         {
-//           "name": "product name",
-//           "price": number (just the numeric value),
-//           "image": "image URL"
-//         }
-        
-//         If you cannot access the URL directly, please indicate that in the response.
-//         Do not include any markdown formatting or additional text.
-//       `;
-      
-//       const result = await model.generateContent(prompt);
-//       const response = await result.response.text();
-//       console.log('Gemini response:', response);
-      
-//       productData = extractJSON(response);
-      
-//       if (!productData.name || productData.name.includes('cannot access')) {
-//         throw new Error('AI could not extract product details');
-//       }
-//     } catch (aiError) {
-//       console.log('AI extraction failed, falling back to web scraping:', aiError.message);
-//       productData = await scrapeProductDetails(link);
-//     }
-    
-//     if (!productData.name) {
-//       return res.status(400).json({ error: "Could not extract product name" });
-//     }
-    
-//     if (typeof productData.price === 'string') {
-//       productData.price = cleanPrice(productData.price);
-//     }
-    
-//     // Detect category using intelligent system
-//     const category = categoryDetector.detectCategory(productData.name, productData.price);
-    
-//     const finalProductData = {
-//       name: productData.name || 'Unknown Product',
-//       price: productData.price || 0,
-//       image: productData.image || '',
-//       category: category,
-//       source: link
-//     };
-    
-//     return res.status(200).json(finalProductData);
-//   } catch (error) {
-//     console.error("Parsing error:", error);
-    
-//     if (error.message.includes('timeout')) {
-//       return res.status(408).json({ error: "Request timeout - the website took too long to respond" });
-//     } else if (error.message.includes('Network Error')) {
-//       return res.status(503).json({ error: "Network error - unable to reach the website" });
-//     } else if (error.message.includes('404')) {
-//       return res.status(404).json({ error: "Product page not found" });
-//     }
-    
-//     return res.status(500).json({ 
-//       error: "Failed to parse product link",
-//       details: process.env.NODE_ENV === 'development' ? error.message : undefined
-//     });
-//   }
-// };
-
-// // Parse product and save to MongoDB
-// export const parseAndSaveProduct = async (req, res) => {
-//   try {
-//     const { 
-//       link, 
-//       userId, 
-//       targetDate, 
-//       contributionType, 
-//       contributionAmount 
-//     } = req.body;
-    
-//     // Validate required fields
-//     if (!link || !userId || !targetDate || !contributionType || !contributionAmount) {
-//       return res.status(400).json({ 
-//         error: "Missing required fields: link, userId, targetDate, contributionType, contributionAmount" 
-//       });
-//     }
-    
-//     if (!['monthly', 'daily'].includes(contributionType)) {
-//       return res.status(400).json({ 
-//         error: "contributionType must be either 'monthly' or 'daily'" 
-//       });
-//     }
-    
-//     try {
-//       new URL(link);
-//     } catch {
-//       return res.status(400).json({ error: "Invalid URL format" });
-//     }
-    
-//     let productData = null;
-    
-//     // Extract product data (same logic as parseProduct)
-//     try {
-//       const prompt = `
-//         Extract product information from this e-commerce URL: ${link}
-        
-//         Please return ONLY a valid JSON object with the following structure:
-//         {
-//           "name": "product name",
-//           "price": number (just the numeric value),
-//           "image": "image URL"
-//         }
-        
-//         If you cannot access the URL directly, please indicate that in the response.
-//         Do not include any markdown formatting or additional text.
-//       `;
-      
-//       const result = await model.generateContent(prompt);
-//       const response = await result.response.text();
-//       console.log('Gemini response:', response);
-      
-//       productData = extractJSON(response);
-      
-//       if (!productData.name || productData.name.includes('cannot access')) {
-//         throw new Error('AI could not extract product details');
-//       }
-//     } catch (aiError) {
-//       console.log('AI extraction failed, falling back to web scraping:', aiError.message);
-//       productData = await scrapeProductDetails(link);
-//     }
-    
-//     if (!productData.name) {
-//       return res.status(400).json({ error: "Could not extract product name" });
-//     }
-    
-//     if (typeof productData.price === 'string') {
-//       productData.price = cleanPrice(productData.price);
-//     }
-    
-//     // Detect category
-//     const category = categoryDetector.detectCategory(productData.name, productData.price);
-    
-//     // Create new product document with correct field mapping
-//     const newProduct = new Product({
-//       userId: userId,
-//       title: productData.name, // name -> title
-//       price: productData.price || 0,
-//       imageUrl: productData.image || '', // image -> imageUrl
-//       category: category,
-//       productUrl: link, // source -> productUrl
-//       targetDate: new Date(targetDate),
-//       contributionType: contributionType,
-//       contributionAmount: Number(contributionAmount),
-//       savedAmount: 0 // Default value
-//     });
-    
-//     // Save to MongoDB
-//     const savedProduct = await newProduct.save();
-    
-//     return res.status(201).json({
-//       message: "Product parsed and saved successfully",
-//       product: savedProduct
-//     });
-    
-//   } catch (error) {
-//     console.error("Parse and save error:", error);
-    
-//     // Handle MongoDB validation errors
-//     if (error.name === 'ValidationError') {
-//       const validationErrors = Object.values(error.errors).map(err => err.message);
-//       return res.status(400).json({ 
-//         error: "Validation failed",
-//         details: validationErrors
-//       });
-//     }
-    
-//     // Handle duplicate key errors
-//     if (error.code === 11000) {
-//       return res.status(409).json({ 
-//         error: "Product already exists for this user"
-//       });
-//     }
-    
-//     if (error.message.includes('timeout')) {
-//       return res.status(408).json({ error: "Request timeout - the website took too long to respond" });
-//     } else if (error.message.includes('Network Error')) {
-//       return res.status(503).json({ error: "Network error - unable to reach the website" });
-//     } else if (error.message.includes('404')) {
-//       return res.status(404).json({ error: "Product page not found" });
-//     }
-    
-//     return res.status(500).json({ 
-//       error: "Failed to parse and save product",
-//       details: process.env.NODE_ENV === 'development' ? error.message : undefined
-//     });
-//   }
-// };
-
-// // Get all products for a user
-// export const getUserProducts = async (req, res) => {
-//   try {
-//     const { userId } = req.params;
-    
-//     if (!userId) {
-//       return res.status(400).json({ error: "User ID is required" });
-//     }
-    
-//     const products = await Product.find({ userId }).sort({ createdAt: -1 });
-    
-//     return res.status(200).json({
-//       products: products,
-//       count: products.length
-//     });
-    
-//   } catch (error) {
-//     console.error("Get products error:", error);
-//     return res.status(500).json({ 
-//       error: "Failed to fetch products"
-//     });
-//   }
-// };
-
-// // Update saved amount for a product
-// export const updateSavedAmount = async (req, res) => {
-//   try {
-//     const { productId } = req.params;
-//     const { savedAmount } = req.body;
-    
-//     if (!productId || savedAmount === undefined) {
-//       return res.status(400).json({ 
-//         error: "Product ID and saved amount are required" 
-//       });
-//     }
-    
-//     const updatedProduct = await Product.findByIdAndUpdate(
-//       productId,
-//       { savedAmount: Number(savedAmount) },
-//       { new: true, runValidators: true }
-//     );
-    
-//     if (!updatedProduct) {
-//       return res.status(404).json({ error: "Product not found" });
-//     }
-    
-//     return res.status(200).json({
-//       message: "Saved amount updated successfully",
-//       product: updatedProduct
-//     });
-    
-//   } catch (error) {
-//     console.error("Update saved amount error:", error);
-//     return res.status(500).json({ 
-//       error: "Failed to update saved amount"
-//     });
-//   }
-// };
-
-// // Delete a product
-// export const deleteProduct = async (req, res) => {
-//   try {
-//     const { productId } = req.params;
-    
-//     if (!productId) {
-//       return res.status(400).json({ error: "Product ID is required" });
-//     }
-    
-//     const deletedProduct = await Product.findByIdAndDelete(productId);
-    
-//     if (!deletedProduct) {
-//       return res.status(404).json({ error: "Product not found" });
-//     }
-    
-//     return res.status(200).json({
-//       message: "Product deleted successfully",
-//       deletedProduct: deletedProduct
-//     });
-    
-//   } catch (error) {
-//     console.error("Delete product error:", error);
-//     return res.status(500).json({ 
-//       error: "Failed to delete product"
-//     });
-//   }
-// };
-
-// // Original scraping-only function (kept for compatibility)
-// export const parseProductWithScraping = async (req, res) => {
-//   try {
-//     const { link } = req.body;
-//     if (!link) {
-//       return res.status(400).json({ error: "Product link is required" });
-//     }
-//     try {
-//       new URL(link);
-//     } catch {
-//       return res.status(400).json({ error: "Invalid URL format" });
-//     }
-//     const productData = await scrapeProductDetails(link);
-//     return res.status(200).json({
-//       ...productData,
-//       source: link
-//     });
-//   } catch (error) {
-//     console.error("Scraping error:", error);
-//     return res.status(500).json({ 
-//       error: "Failed to scrape product details",
-//       details: process.env.NODE_ENV === 'development' ? error.message : undefined
-//     });
-//   }
-// }

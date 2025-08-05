@@ -7,10 +7,7 @@ const productSchema = new mongoose.Schema({
   productImage: { type: String }, // optional
   productType: { type: String, default: 'General' },
   productLink: { type: String, required: true },
-  targetDate: { type: Date, required: true },
-  contributionType: { type: String, required: true },
-  contributionAmount: { type: Number, required: true },
-  savedAmount: { type: Number, default: 0 }
+  targetDate: { type: Date, required: true }
 }, { timestamps: true });
 
 export default mongoose.model('Product', productSchema);
