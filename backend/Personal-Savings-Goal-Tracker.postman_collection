@@ -1,0 +1,522 @@
+{
+	"info": {
+		"_postman_id": "62b1c3f4-d1fa-4428-8c47-2606710bea1d",
+		"name": "project-1",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "41568481"
+	},
+	"item": [
+		{
+			"name": "Authentication Testing",
+			"item": [
+				{
+					"name": "http://localhost:7000/api/auth/register",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODM5NDA3NDkwN2MwOTYzZWEzMTc0NWQiLCJpYXQiOjE3NDg1ODI1MTYsImV4cCI6MTc0OTE4NzMxNn0.IdaN84imG2f7msjD7xANXNzQU1a6mQX59YDo0QBTNXg",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"name\":\"gowtham\",\r\n    \"email\":\"gowtham.sl2023ai-ds@sece.ac.in\",\r\n    \"password\":\"gowtham@1\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:7000/api/auth/register",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "7000",
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:7000/api/auth/login",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\":\"gowtham.sl2023ai-ds@sece.ac.in\",\r\n    \"password\":\"gowtham@1\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:7000/api/auth/login",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "7000",
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:7000/api/auth/verify-user",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:7000/api/auth/verify-user",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "7000",
+							"path": [
+								"api",
+								"auth",
+								"verify-user"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:7000/api/auth/send-otp",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:7000/api/auth/send-otp",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "7000",
+							"path": [
+								"api",
+								"auth",
+								"send-otp"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:7000/api/auth/logout",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:7000/api/auth/logout",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "7000",
+							"path": [
+								"api",
+								"auth",
+								"logout"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:7000/api/auth/is-Authenticated",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\":\"gowtham.sl2023ai-ds@sece.ac.in\",\r\n    \"password\":\"gowtham@1\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:7000/api/auth/is-Authenticated",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "7000",
+							"path": [
+								"api",
+								"auth",
+								"is-Authenticated"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:7000/api/auth/reset-password",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:7000/api/auth/reset-password",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "7000",
+							"path": [
+								"api",
+								"auth",
+								"reset-password"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:7000/api/auth/reset-password-otp",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:7000/api/auth/reset-password-otp",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "7000",
+							"path": [
+								"api",
+								"auth",
+								"reset-password-otp"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "User Testing",
+			"item": [
+				{
+					"name": "http://localhost:7000/api/user/data",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\":\"gowtham.sl2023ai-ds@sece.ac.in\",\r\n    \"password\":\"gowtham\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:7000/api/user/data",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "7000",
+							"path": [
+								"api",
+								"user",
+								"data"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:7000/api/user/update-data",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"name\":\"gowtham07\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:7000/api/user/update-data",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "7000",
+							"path": [
+								"api",
+								"user",
+								"update-data"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:7000/api/user/delete-account",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:7000/api/user/delete-account",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "7000",
+							"path": [
+								"api",
+								"user",
+								"delete-account"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Component Testing",
+			"item": [
+				{
+					"name": "http://localhost:7000/api/product/create-product",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"link\": \"https://www.myntra.com/shirts/the+indian+garage+co/the-indian-garage-co-men-yellow-comfort-checked-regular-fit-casual-shirt/17357496/buy\",\r\n  \"targetDate\": \"2025-12-31\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:7000/api/product/create-product",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "7000",
+							"path": [
+								"api",
+								"product",
+								"create-product"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:7000/api/product/deleteProduct",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"ids\":[\"6892406b7c0fcd9bd2b10e09\"]\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:7000/api/product/deleteProduct",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "7000",
+							"path": [
+								"api",
+								"product",
+								"deleteProduct"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:7000/api/product/getUserProducts",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:7000/api/product/getUserProducts",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "7000",
+							"path": [
+								"api",
+								"product",
+								"getUserProducts"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "userContribution tracking Testing",
+			"item": [
+				{
+					"name": "http://localhost:7000/api/contributions/add-contribute/689c94bc18b133ead93c8d3f",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n   \"contributionAmount\":\"2000\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:7000/api/contributions/add-contribute/6892406b7c0fcd9bd2b10e09",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "7000",
+							"path": [
+								"api",
+								"contributions",
+								"add-contribute",
+								"6892406b7c0fcd9bd2b10e09"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:7000/api/user-goal/get-contribute/6892406b7c0fcd9bd2b10e09",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:7000/api/contributions/get-contribute",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "7000",
+							"path": [
+								"api",
+								"contributions",
+								"get-contribute"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:7000/api/user-goal/delete-contributeById/6893900b51ab53826209a2fa",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:7000/api/contributions/delete-contribute/689cb6b06cbdc2f02a82e901",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "7000",
+							"path": [
+								"api",
+								"contributions",
+								"delete-contribute",
+								"689cb6b06cbdc2f02a82e901"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
