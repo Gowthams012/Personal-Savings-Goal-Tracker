@@ -1,4 +1,5 @@
 import Product from '../models/productModels.js';
+import UserContribution from '../models/userContributeModels.js';
 import { fetchProduct } from '../AI/productFetching.js';
 
 // Add a product by scraping info from the given link
@@ -57,7 +58,7 @@ export const getUserProducts = async (req, res) => {
 export const deleteProduct = async (req, res) => {
   try {
     const userId = req.cookies?.userId || req.params?.userId || req.body?.userId;
-    const { ids } = req.body;
+    const { ids } = req.body; // product IDs
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ error: 'No product IDs provided' });
@@ -66,11 +67,17 @@ export const deleteProduct = async (req, res) => {
     // Delete only products owned by the user
     const result = await Product.deleteMany({ _id: { $in: ids }, userId });
 
-    if (result.deletedCount === 0) {
-      return res.status(404).json({ error: 'No matching products found for deletion' });
+    // Delete contributions linked to these products for this user
+    const result_contribute = await UserContribution.deleteMany({ productId: { $in: ids }, userId });
+
+    if (result.deletedCount === 0 && result_contribute.deletedCount === 0) {
+      return res.status(404).json({ error: 'No matching products or contributions found for deletion' });
     }
 
-    return res.status(200).json({ message: `${result.deletedCount} product(s) deleted successfully` });
+    return res.status(200).json({
+      message: `${result.deletedCount} product(s) and ${result_contribute.deletedCount} contribution(s) deleted successfully`
+    });
+
   } catch (err) {
     console.error('Delete Product Error:', err);
     return res.status(500).json({ error: 'Server error during deletion' });

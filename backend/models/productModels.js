@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import UserContribution from './userContributeModels.js'; // import your contribution model
 
 const productSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
@@ -10,4 +11,11 @@ const productSchema = new mongoose.Schema({
   targetDate: { type: Date, required: true }
 }, { timestamps: true });
 
-export default mongoose.model('Product', productSchema);
+// Cascade delete contributions when a product is deleted
+productSchema.pre("findOneAndDelete", async function (next) {
+  const productId = this.getQuery()._id;
+  await UserContribution.deleteMany({ productId });
+  next();
+});
+
+export default mongoose.model("Product", productSchema);

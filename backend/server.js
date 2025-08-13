@@ -6,6 +6,7 @@ import connectDB from './db.js';
 import authRouter from './server/authRoutes.js';
 import userRouter from './server/userRoutes.js';
 import productRouter from './server/productRoutes.js';
+import userContributionRouter from './server/userContributeRoutes.js';
 const app=express();
 const PORT = process.env.PORT || 5000;
 
@@ -19,5 +20,6 @@ connectDB();
 app.use('/api/auth',authRouter);
 app.use('/api/user',userRouter);
 app.use('/api/product',productRouter);
+app.use('/api/contributions', userContributionRouter);
 
 app.listen(PORT,()=>console.log(`Server is running on port ${PORT}`));
