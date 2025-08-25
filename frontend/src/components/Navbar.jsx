@@ -1,29 +1,35 @@
-import React from 'react'
-import {assets} from '../assets/assets'
+import React, { useState } from "react";
+import { assets } from "../assets/assets";
+import "./Navbar.css"; // we'll use a small CSS file for responsiveness
 
 const Navbar = () => {
-  return (
-    <div className="w-full flex items-center justify-between p-4 sm:p-6 sm:px-24 absolute top-0">
-      <img 
-        src={assets.logo} 
-        alt="logo" 
-        style={{ width: '70px', height: '70px', objectFit: 'contain', paddingTop : '20px', paddingLeft : '10px' }}
-      />
-      <a
-        href="/login"
-        style={{
-          paddingTop: '10px',
-          paddingRight: '40px',
-          cursor: 'pointer',
-          fontSize: '15px',
-          textDecoration: 'None',
-          color: 'inherit'
-        }}
-      >
-        Sign in
-      </a>
-    </div>
-  )
-}
+  const [menuOpen, setMenuOpen] = useState(false);
 
-export default Navbar
+  return (
+    <div className="navbar">
+      <div className="navbar-container">
+        {/* Logo + Title */}
+        <div className="navbar-logo">
+          <img src={assets.logo} alt="logo" />
+          <h2>TrackMySavings</h2>
+        </div>
+
+        {/* Desktop Links */}
+        <div className={`navbar-links ${menuOpen ? "active" : ""}`}>
+          <a href="/home">Home</a>
+          <a href="/contribution-history">Contribution History</a>
+          <a href="/history">History</a>
+          <a href="/about-us">About Us</a>
+          <a href="/account">Account</a>
+        </div>
+
+        {/* Hamburger (mobile only) */}
+        <div className="navbar-hamburger" onClick={() => setMenuOpen(!menuOpen)}>
+          ☰
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Navbar;

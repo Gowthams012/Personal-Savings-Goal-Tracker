@@ -55,7 +55,7 @@ const Splashscreen = () => {
         }`}
       >
         <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-1">
-          Personal Savings Goal Tracker
+          TrackMySavings
         </h1>
       </div>
 
