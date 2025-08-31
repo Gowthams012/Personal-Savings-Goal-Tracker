@@ -9,10 +9,11 @@ export const getUserData = async (req, res) => {
     }
     res.json({
       success: true,
-      userData:{
+      userData: {
         name: user.name,
-        isAccountVerified: user.isVerified,
-      } 
+        email: user.email,
+        emailVerified: user.isVerified,
+      }
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });

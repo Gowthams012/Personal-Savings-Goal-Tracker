@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const Header = () => {
   // CSS is injected into a <style> tag for a self-contained component.
@@ -113,7 +114,7 @@ const Header = () => {
           <p className="splash-quote">
             "The secret to getting ahead is getting started. Plan your future, track your progress, and watch your dreams become reality."
           </p>
-          <a href="#goals" className="start-button">
+          <Link to="/signup" className="start-button">
             Get Started
             <svg 
               className="start-button-icon" 
@@ -125,7 +126,7 @@ const Header = () => {
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
             </svg>
-          </a>
+          </Link>
         </div>
       </main>
     </>

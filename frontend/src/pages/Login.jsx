@@ -1,17 +1,27 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
 import axios from 'axios';
-import { AppContext } from '../context/AppContext'; // ✅ correct import
-import toast from 'react-toastify';
+import { AppContext } from '../context/AppContext';
+import { toast } from 'react-toastify';
 
 const Login = () => {
+  const [emailError, setEmailError] = useState(false);
+  const [passwordError, setPasswordError] = useState(false);
   const navigate = useNavigate();
-  const [state, setState] = useState('Sign In'); // ✅ default should be Sign In
+  const [state, setState] = useState('Sign In');
+  const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const { backendUrl, setIsLoggedIn ,getUserData} = useContext(AppContext); // ✅ use AppContext
+  const { backendUrl, setIsLoggedIn, getUserData, isLoggedIn } = useContext(AppContext);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isLoggedIn) {
+      navigate('/dashboard');
+    }
+  }, [isLoggedIn, navigate]);
 
   const css = `
     .login-page-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background-color: #f9fafb; font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 1rem; }
@@ -30,44 +40,63 @@ const Login = () => {
     .forgot-password-link:hover { text-decoration: underline; }
     .login-button { width: 100%; padding: 0.75rem 1rem; font-size: 1rem; font-weight: 600; color: #ffffff; background-color: #2563eb; border: none; border-radius: 0.375rem; cursor: pointer; transition: background-color 0.2s; }
     .login-button:hover { background-color: #1d4ed8; }
+    .login-button:disabled { background-color: #9ca3af; cursor: not-allowed; }
     .signup-link-container { margin-top: 1.5rem; font-size: 0.875rem; color: #6b7280; }
     .signup-link { color: #2563eb; font-weight: 500; text-decoration: none; cursor: pointer; }
     .signup-link:hover { text-decoration: underline; }
+    .error-message { color: #dc2626; font-size: 0.85rem; margin-top: 0.25rem; display: block; }
   `;
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setEmailError(false);
+    setPasswordError(false);
+
     try {
-      console.log('Attempting login with:', { email, password });
-
-      // mock token
-      const mockAuthToken = 'aBcDeFgHiJkLmNoPqRsTuVwXyZ123456';
-      Cookies.set('auth_token', mockAuthToken, { expires: 7, secure: true, sameSite: 'strict' });
-      Cookies.set('user_email', email, { expires: 7 });
+      axios.defaults.withCredentials = true;
       
-      axios.defaults.withCredentials  = true;
+      const response = await axios.post(`${backendUrl}/api/auth/login`, {
+        email,
+        password
+      });
 
-      if (state === 'Sign Up') {
-        const { data } = await axios.post(`${backendUrl}/api/auth/login`, { 
-          name: email.split('@')[0], 
-          email, 
-          password 
-        });
-        if (data.success) {
-          alert(data.message);
-          setIsLoggedIn(true);
-          getUserData();
-          navigate('/');
-        } else {
-          toast.error(data.message);
-        }
-      } else {
+      const data = response.data;
+      console.log('Login response:', data);
+
+  // Fixed typo: use 'sucess' to match backend
+  if (data.sucess) {
+        toast.success('Login successful!');
         setIsLoggedIn(true);
-        navigate('/');
+        // Wait for userData to be set before navigating
+        await getUserData();
+  setTimeout(() => navigate('/dashboard'), 100); // slight delay to ensure context updates
+      } else {
+        handleLoginError(data.message);
       }
     } catch (error) {
-      console.error('Login failed:', error);
-      alert('Login failed. Please try again.');
+      console.error('Login error:', error);
+      if (error.response && error.response.data) {
+        handleLoginError(error.response.data.message);
+      } else {
+        toast.error('Network error. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLoginError = (message) => {
+    if (message === 'User does not exist') {
+      toast.error('No account found for this email.');
+      setEmailError(true);
+      setTimeout(() => setEmailError(false), 3000);
+    } else if (message === 'Invalid password') {
+      toast.error('Incorrect password.');
+      setPasswordError(true);
+      setTimeout(() => setPasswordError(false), 3000);
+    } else {
+      toast.error(message || 'Login failed. Please try again.');
     }
   };
 
@@ -95,7 +124,11 @@ const Login = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                style={emailError ? { borderColor: '#dc2626', boxShadow: '0 0 0 2px rgba(220, 38, 38, 0.2)' } : {}}
               />
+              {emailError && (
+                <span className="error-message">No account found for this email.</span>
+              )}
             </div>
 
             <div className="input-group">
@@ -108,15 +141,19 @@ const Login = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                style={passwordError ? { borderColor: '#dc2626', boxShadow: '0 0 0 2px rgba(220, 38, 38, 0.2)' } : {}}
               />
+              {passwordError && (
+                <span className="error-message">Incorrect password. Please try again.</span>
+              )}
             </div>
 
             <div className="options-container">
-              <a href="/reset-password" className="forgot-password-link">Forgot password?</a>
+              <Link to="/reset-password" className="forgot-password-link">Forgot password?</Link>
             </div>
 
-            <button type="submit" className="login-button">
-              Sign In
+            <button type="submit" className="login-button" disabled={loading}>
+              {loading ? 'Signing In...' : 'Sign In'}
             </button>
           </form>
 
