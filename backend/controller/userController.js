@@ -2,7 +2,7 @@ import userModel from "../models/userModels.js";
 
 export const getUserData = async (req, res) => {
   try {
-    const {userId} = req.body;  
+    const userId = req.userId; // from middleware
     const user = await userModel.findById(userId);
     if(!user) {
       return res.status(404).json({ success: false, message: "User not found" });
@@ -10,9 +10,11 @@ export const getUserData = async (req, res) => {
     res.json({
       success: true,
       userData: {
+        _id: user._id, // ensure _id is present for frontend
         name: user.name,
         email: user.email,
         emailVerified: user.isVerified,
+        createdAt: user.createdAt // optional
       }
     });
   } catch (error) {

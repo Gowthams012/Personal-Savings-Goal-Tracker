@@ -12,7 +12,7 @@ authRouter.post('/logout',logout);
 authRouter.post('/send-otp',userAuth,sendverifyotp);
 authRouter.post('/verify-user',userAuth,verifyemail);
 authRouter.get('/is-Authenticated',userAuth,isAuthenticated);
-authRouter.post('/reset-password-otp',userAuth,restotp);
-authRouter.post('/reset-password',userAuth,resetpassword);
+authRouter.post('/reset-password-otp', restotp);
+authRouter.post('/reset-password', resetpassword);
 
 export default authRouter;
