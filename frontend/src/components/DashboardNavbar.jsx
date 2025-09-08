@@ -8,7 +8,7 @@ const DashboardNavbar = () => {
 
   const navLinks = [
     { name: 'Dashboard', path: '/dashboard' },
-    { name: 'Contribution History', path: '/history' },
+    { name: 'Contribution History', path: '/contribution-history' },
     { name: 'Goals', path: '/goals' },
     { name: 'About Us', path: '/about' },
     { name: 'Account', path: '/account' },

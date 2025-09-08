@@ -6,24 +6,23 @@ import { fetchProduct } from '../AI/productFetching.js';
 export const productAdd = async (req, res) => {
   try {
     const { link, targetDate } = req.body;
-    const userId = req.cookies.userId || req.body.userId;
+    const userId = req.userId; // set by userAuth middleware
 
     if (!link || !userId || !targetDate) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-  const productData = await fetchProduct(link);
+    const productData = await fetchProduct(link);
 
-  const newProduct = new Product({
-  userId,
-  productName: productData.name,
-  productPrice: productData.price,
-  productImage: productData.image,     
-  productType: productData.category || 'General',
-  productLink: link,
-  targetDate: new Date(targetDate),
-});
-
+    const newProduct = new Product({
+      userId,
+      productName: productData.name,
+      productPrice: productData.price,
+      productImage: productData.image,
+      productType: productData.category || 'General',
+      productLink: link,
+      targetDate: new Date(targetDate),
+    });
 
     const saved = await newProduct.save();
 
@@ -40,12 +39,10 @@ export const productAdd = async (req, res) => {
 // Get all products for a specific user
 export const getUserProducts = async (req, res) => {
   try {
-    const userId = req.cookies?.userId || req.params?.userId || req.body?.userId;
-
+    // Always get userId from req.userId (set by userAuth middleware)
+    const userId = req.userId;
     if (!userId) return res.status(400).json({ error: "User ID is required" });
-
     const products = await Product.find({ userId }).sort({ createdAt: -1 });
-
     return res.status(200).json({ products });
   } catch (err) {
     console.error("Fetch User Products Error:", err);
@@ -57,7 +54,8 @@ export const getUserProducts = async (req, res) => {
 // Delete a product by ID
 export const deleteProduct = async (req, res) => {
   try {
-    const userId = req.cookies?.userId || req.params?.userId || req.body?.userId;
+    // Always get userId from req.userId (set by userAuth middleware)
+    const userId = req.userId;
     const { ids } = req.body; // product IDs
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {

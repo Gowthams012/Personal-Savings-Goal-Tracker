@@ -8,6 +8,9 @@ import Signup from './pages/Signup'
 import Dashboard from './pages/Dashboard'
 import DashboardNavbar from './components/DashboardNavbar'
 import Account from './pages/Account'
+import ContributionHistory from './pages/ContributionHistory'
+import Goals from './pages/Goals'
+import AboutUs from './pages/AboutUs'
 
 const App = () => {
   return (
@@ -36,6 +39,15 @@ const App = () => {
 
         {/* Account Page */}
         <Route path='/account' element={<Account />} />
+
+        {/* Contribution History Page */}
+        <Route path='/contribution-history' element={<ContributionHistory />} />
+
+        {/* Goals Page */}
+        <Route path='/goals' element={<Goals />} />
+
+        {/* About Us Page */}
+        <Route path='/about' element={<AboutUs />} />
 
       </Routes>
     </div>
