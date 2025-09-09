@@ -17,7 +17,7 @@ const Goals = () => {
       setError('');
       try {
         const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
-  const res = await axios.get(`${backendUrl}/api/product/get-user-products`, {
+        const res = await axios.get(`${backendUrl}/api/product/get-user-products`, {
           headers: { Authorization: `Bearer ${token}` }, withCredentials: true
         });
         setProducts(res.data.products || []);
@@ -35,6 +35,10 @@ const Goals = () => {
       }
     };
     fetchProducts();
+    // Listen for contributionAdded event to refresh
+    const handler = () => fetchProducts();
+    window.addEventListener('contributionAdded', handler);
+    return () => window.removeEventListener('contributionAdded', handler);
   }, [backendUrl]);
 
   // Fetch contributions for all products
@@ -42,13 +46,14 @@ const Goals = () => {
     const fetchContributions = async () => {
       try {
         const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
-        const res = await axios.get(`${backendUrl}/api/userContribute/get-Contribute`, {
+        const res = await axios.get(`${backendUrl}/api/contributions/get-Contribute`, {
           headers: { Authorization: `Bearer ${token}` }, withCredentials: true
         });
         // Map productId to contributionAmount
         const contribMap = {};
         (res.data.contributions || []).forEach(c => {
-          contribMap[c.productId] = c.contributionAmount;
+          const pid = c.productId && typeof c.productId === 'object' ? c.productId._id : c.productId;
+          contribMap[pid] = c.contributionAmount;
         });
         setContributions(contribMap);
       } catch {
@@ -105,6 +110,8 @@ const Goals = () => {
             {products.map(product => {
               const contributed = contributions[product._id] || 0;
               const percent = Math.min(100, Math.round((contributed / product.productPrice) * 100));
+              const remaining = Math.max(product.productPrice - contributed, 0);
+              const daysToGo = product.targetDate ? Math.max(0, Math.ceil((new Date(product.targetDate) - new Date()) / (1000 * 60 * 60 * 24))) : null;
               return (
                 <div key={product._id} style={{ border: '1px solid #e0e0e0', borderRadius: 14, padding: '24px 28px', background: '#fafdff', marginBottom: 18, boxShadow: '0 2px 8px #f2f6fa', position: 'relative' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
@@ -116,6 +123,8 @@ const Goals = () => {
                         <span style={{ position: 'absolute', left: '50%', top: 0, transform: 'translateX(-50%)', fontSize: 13, color: percent === 100 ? '#43a047' : '#1976d2', fontWeight: 700 }}>{percent}%</span>
                       </div>
                       <div style={{ fontSize: 15, color: '#555', marginBottom: 2 }}>Saved: ₹{contributed} / ₹{product.productPrice}</div>
+                      <div style={{ fontSize: 15, color: '#b85c00', marginBottom: 2 }}>Remaining: ₹{remaining}</div>
+                      {daysToGo !== null && <div style={{ fontSize: 15, color: '#1976d2', marginBottom: 2 }}>Days to go: {daysToGo}</div>}
                     </div>
                     <div style={{ display: 'flex', gap: 10 }}>
                       <button

@@ -19,6 +19,7 @@ const Dashboard = () => {
   const [message, setMessage] = useState('');
 
   // Fetch user's products for contribution dropdown
+  // Fetch user's products for contribution dropdown
   useEffect(() => {
     if (mode === 'contribution') {
       const fetchProducts = async () => {
@@ -26,7 +27,7 @@ const Dashboard = () => {
         setMessage('');
         try {
           const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
-          const res = await axios.get(`${backendUrl}/api/product/getUserProducts`, {
+          const res = await axios.get(`${backendUrl}/api/product/get-user-products`, {
             headers: { Authorization: `Bearer ${token}` }, withCredentials: true
           });
           setProducts(res.data.products || []);
@@ -58,6 +59,13 @@ const Dashboard = () => {
       setMessage('Product added successfully!');
       setProductLink('');
       setTargetDate('');
+      // Refresh products for contribution dropdown if user switches mode
+      if (mode === 'contribution') {
+        const res = await axios.get(`${backendUrl}/api/product/get-user-products`, {
+          headers: { Authorization: `Bearer ${token}` }, withCredentials: true
+        });
+        setProducts(res.data.products || []);
+      }
     } catch (err) {
       setMessage(err.response?.data?.error || 'Failed to add product');
     } finally {
@@ -78,13 +86,15 @@ const Dashboard = () => {
     try {
       const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
       await axios.post(
-        `${backendUrl}/api/userContribute/add-contribute/${selectedProduct}`,
+        `${backendUrl}/api/contributions/add-contribute/${selectedProduct}`,
         { contributionAmount: contributionAmt },
         { headers: { Authorization: `Bearer ${token}` }, withCredentials: true }
       );
       setMessage('Contribution added successfully!');
       setSelectedProduct('');
       setContributionAmt('');
+      // Notify Goals page to refresh
+      window.dispatchEvent(new Event('contributionAdded'));
     } catch (err) {
       setMessage(err.response?.data?.message || 'Failed to add contribution');
     } finally {

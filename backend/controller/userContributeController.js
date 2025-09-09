@@ -4,9 +4,10 @@ import Product from "../models/productModels.js";
 
 export const addUserContribution = async (req, res) => {
   try {
-    const userId = req.cookies.userId || req.body.userId;
+    // Always get userId from req.userId (set by userAuth middleware)
+    const userId = req.userId;
     const productId = req.params.productId || req.body.productId;
-    const { contributionAmount} = req.body;
+    const { contributionAmount } = req.body;
 
     if (!userId || !productId || contributionAmount == null) {
       return res.status(400).json({ success: false, message: "Missing required fields" });
@@ -28,9 +29,9 @@ export const addUserContribution = async (req, res) => {
 
     // Prevent contributing the full price in one go
     if (Number(contributionAmount) >= product.productPrice) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Contribution amount must be less than the product price" 
+      return res.status(400).json({
+        success: false,
+        message: "Contribution amount must be less than the product price"
       });
     }
 
@@ -71,7 +72,8 @@ export const addUserContribution = async (req, res) => {
 
 export const getUserContributions = async (req, res) => {
   try {
-    const userId = req.cookies.userId || req.body.userId;
+    // Always get userId from req.userId (set by userAuth middleware)
+    const userId = req.userId;
     if (!userId) {
       return res.status(400).json({ success: false, message: "User ID required" });
     }
