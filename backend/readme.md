@@ -49,12 +49,13 @@ Many people struggle to organize and monitor their savings goals. This backend e
    ```
 
 3. **Configure environment variables:**
-   - Copy `.env.example` to `.env` and fill in your MongoDB URI, JWT secret, etc.
-
-   - MONGO_URI=your_mongodb_connection_string
-   - JWT_SECRET=your_jwt_secret
-   - PORT=5000
-   - NODE_ENV=development
+   - Copy `backend/.env.example` to `backend/config/.env` and fill in values.
+   - Keep secrets out of Git (already covered by `.gitignore`).
+   - Example keys:
+     - `MONGO_URI=your_mongodb_connection_string`
+     - `JWT_SECRET=your_jwt_secret`
+     - `PORT=5000`
+     - `NODE_ENV=development`
 
 4. **Run the server:**
    ```

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import puppeteer from 'puppeteer';
 import * as cheerio from 'cheerio';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -344,18 +345,37 @@ const getPageContent = async (url) => {
     return response.data;
   } catch (error) {
     console.log('Primary request failed, trying with minimal headers...');
-   
     try {
       const response = await axios.get(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; ProductBot/1.0)'
-        },
-        timeout: 10000
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ProductBot/1.0)' },
+        timeout: 10000,
+        validateStatus: (status) => status < 500
       });
+      if (response.status === 403 || response.status === 429) throw new Error(`Blocked (${response.status})`);
       return response.data;
     } catch (fallbackError) {
-      throw new Error(`Failed to fetch page: ${fallbackError.message}`);
+      console.log('Minimal headers fetch failed, trying headless browser...');
+      // Final fallback: render page with Puppeteer to bypass CDN protections
+      return await getPageWithPuppeteer(url);
     }
+  }
+};
+
+const getPageWithPuppeteer = async (url) => {
+  const browser = await puppeteer.launch({
+    headless: 'new',
+    args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage']
+  });
+  try {
+    const page = await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.waitForTimeout(1000);
+    const html = await page.content();
+    return html;
+  } finally {
+    await browser.close();
   }
 };
 

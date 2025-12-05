@@ -1,0 +1,26 @@
+# Root ignores
+node_modules/
+.env
+*.env
+npm-debug.log*
+
+# Backend
+backend/.env
+backend/*.env
+backend/node_modules/
+backend/.DS_Store
+
+# Frontend
+frontend/.env
+frontend/*.env
+frontend/node_modules/
+frontend/dist/
+frontend/.DS_Store
+
+# Logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
